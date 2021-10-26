@@ -133,7 +133,10 @@ export function activate(context: vscode.ExtensionContext) {
             const text = document.getText(selection);
 
             const finalURL = calculateURL();
-            const markdown = finalURL + '\n\n```' + document.languageId + '\n' + text + '\n```';
+
+            const start = selection.start.line + 1;
+
+            const markdown = finalURL + '\n\n```' + document.languageId + '=' + start + '\n' + text + '\n```';
             clipboardy.writeSync(markdown);
             vscode.window.showInformationMessage('GitHub URL and code copied to the clipboard!');
         } catch (err) {
