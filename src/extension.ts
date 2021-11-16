@@ -88,10 +88,19 @@ function calculateURL() {
     const gitConfig = ini.parse(fs.readFileSync(path.join(gitDir, 'config'), 'utf8'));
 
     const branchInfo = Object.values(gitConfig).find(val => val['merge'] === refName);
-    if (!branchInfo) {
-        throw new Error('No branch info found. Cannot calculate remote');
-    }
-    const remote = branchInfo['remote'];
+    const remote = (() => {
+        if (branchInfo) {
+            return branchInfo['remote'];
+        } else {
+            vscode.window.showInformationMessage('No branch info found. Try use first remote');
+            for (const entry of Object.entries(gitConfig)) {
+                const matchResult = (/remote "(.+)"/).exec(entry[0]);
+                if (matchResult && matchResult[1]) {
+                    return matchResult[1];
+                }
+            }
+        }
+    })();
     const remoteInfo = Object.entries(gitConfig).find((entry) => entry[0] === `remote "${remote}"`);
     if (!remoteInfo) {
         throw new Error(`No remote found called "${remote}"`);
