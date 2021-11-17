@@ -15,8 +15,16 @@ function getGitHubRepoURL(url: string) {
     if (url.startsWith('https://github.com/')) {
         return url;
     }
+    /*
     if (url.startsWith('git@github.com:')) {
         return 'https://github.com/' + url.substring('git@github.com:'.length);
+    }
+    */
+    // ## default github.com
+    const prefixMatchResult = (/^(.+:)/).exec(url);
+    const prefix = prefixMatchResult && prefixMatchResult[1];
+    if (prefix) {
+        return 'https://github.com/' + url.substring(prefix.length);
     }
     return null;
 }
