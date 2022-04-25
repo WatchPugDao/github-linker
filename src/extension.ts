@@ -31,12 +31,16 @@ function getGitHubRepoURL(url: string) {
 
 function findGitFolder(fileName: string): string {
     let dir = path.dirname(fileName)
+    const { root } = path.parse(dir)
     let gitDir = null;
     while (true) {
         gitDir = path.join(dir, '.git');
         const exits = fs.existsSync(gitDir);
         if (exits) {
             console.log(gitDir);
+            break;
+        } else if (dir === root) {
+            gitDir = null;
             break;
         }
         dir = path.dirname(dir);
@@ -123,8 +127,15 @@ function calculateURL() {
     const end = selection.end.line + 1;
 
     const relativePathURL = relativePath.split(path.sep).join('/');
+    const absolutePathURL = `${repoURL}/blob/${sha}/${relativePathURL}`;
 
-    return `${repoURL}/blob/${sha}/${relativePathURL}#L${start}-L${end}`;
+    if (start === 1 && end === document.lineCount) {
+        return absolutePathURL;
+    } else if (start === end) {
+        return `${absolutePathURL}#L${start}`;
+    }
+
+    return `${absolutePathURL}#L${start}-L${end}`;
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -134,7 +145,9 @@ export function activate(context: vscode.ExtensionContext) {
             clipboardy.writeSync(finalURL);
             vscode.window.showInformationMessage('GitHub URL copied to the clipboard!');
         } catch (err) {
-            vscode.window.showErrorMessage(err.message);
+            if (err instanceof Error) {
+                vscode.window.showErrorMessage(err.message);
+            }
             throw err;
         }
     }));
@@ -157,7 +170,9 @@ export function activate(context: vscode.ExtensionContext) {
             clipboardy.writeSync(markdown);
             vscode.window.showInformationMessage('GitHub URL and code copied to the clipboard!');
         } catch (err) {
-            vscode.window.showErrorMessage(err.message);
+            if (err instanceof Error) {
+                vscode.window.showErrorMessage(err.message);
+            }
             throw err;
         }
     }));
