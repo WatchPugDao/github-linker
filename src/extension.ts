@@ -7,8 +7,9 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as ini from 'ini';
 import * as clipboardy from 'clipboardy';
+import axios from "axios"
 
-function getGitHubRepoURL(url: string) {
+async function getGitHubRepoURL(url: string) {
     if (url.endsWith('.git')) {
         url = url.substring(0, url.length - '.git'.length);
     }
@@ -20,6 +21,15 @@ function getGitHubRepoURL(url: string) {
         return 'https://github.com/' + url.substring('git@github.com:'.length);
     }
     */
+    // for "ssh://git@git.devpug.xyz:2222/watchpug/***"
+    const pugitMatchResult = (/^\w+:\/\/[^\/]+(\/watchpug\/.+)$/).exec(url);
+    if (pugitMatchResult && pugitMatchResult[1]) {
+        const { data } = await axios({
+            method: "GET",
+            url: `https://eo5451bufu073qw.m.pipedream.net${pugitMatchResult[1]}`,
+        });
+        return data.original_url;
+    }
     // ## default github.com
     const prefixMatchResult = (/^(.+:)/).exec(url);
     const prefix = prefixMatchResult && prefixMatchResult[1];
@@ -68,7 +78,7 @@ function getWorktreePath(gitPath: string) {
     }
 }
 
-function calculateURL() {
+async function calculateURL() {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
         throw new Error('No selected editor');
@@ -118,7 +128,7 @@ function calculateURL() {
         throw new Error(`No remote found called "${remote}"`);
     }
     const url = remoteInfo[1]['url'];
-    const repoURL = getGitHubRepoURL(url);
+    const repoURL = await getGitHubRepoURL(url);
     if (!url) {
         throw new Error(`The remote "${remote}" does not look like to be hosted at GitHub`);
     }
@@ -139,9 +149,9 @@ function calculateURL() {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-    context.subscriptions.push(vscode.commands.registerCommand('githublinker.copyLink', () => {
+    context.subscriptions.push(vscode.commands.registerCommand('githublinker.copyLink', async () => {
         try {
-            const finalURL = calculateURL();
+            const finalURL = await calculateURL();
             clipboardy.writeSync(finalURL);
             vscode.window.showInformationMessage('GitHub URL copied to the clipboard!');
         } catch (err) {
@@ -152,7 +162,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand('githublinker.copyMarkdown', () => {
+    context.subscriptions.push(vscode.commands.registerCommand('githublinker.copyMarkdown', async () => {
         try {
             const editor = vscode.window.activeTextEditor;
             if (!editor) {
@@ -162,7 +172,7 @@ export function activate(context: vscode.ExtensionContext) {
 
             const text = document.getText(selection);
 
-            const finalURL = calculateURL();
+            const finalURL = await calculateURL();
 
             const start = selection.start.line + 1;
 
