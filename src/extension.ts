@@ -9,6 +9,8 @@ import * as ini from 'ini';
 import * as clipboardy from 'clipboardy';
 import axios from "axios"
 
+const pugitPathToOriginalUrlCache = new Map<string, string>();
+
 async function getGitHubRepoURL(url: string) {
     if (url.endsWith('.git')) {
         url = url.substring(0, url.length - '.git'.length);
@@ -24,11 +26,17 @@ async function getGitHubRepoURL(url: string) {
     // for "ssh://git@git.devpug.xyz:2222/watchpug/***"
     const pugitMatchResult = (/^\w+:\/\/[^\/]+(\/watchpug\/.+)$/).exec(url);
     if (pugitMatchResult && pugitMatchResult[1]) {
-        const { data } = await axios({
-            method: "GET",
-            url: `https://eo5451bufu073qw.m.pipedream.net${pugitMatchResult[1]}`,
-        });
-        return data.original_url;
+        const cachedOriginalUrl = pugitPathToOriginalUrlCache.get(pugitMatchResult[1]);
+        if (cachedOriginalUrl) {
+            return cachedOriginalUrl;
+        } else {
+            const { data } = await axios({
+                method: "GET",
+                url: `https://eo5451bufu073qw.m.pipedream.net${pugitMatchResult[1]}`,
+            });
+            pugitPathToOriginalUrlCache.set(pugitMatchResult[1], data.original_url);
+            return data.original_url;
+        }
     }
     // ## default github.com
     const prefixMatchResult = (/^(.+:)/).exec(url);
