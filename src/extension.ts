@@ -23,7 +23,7 @@ async function getGitHubRepoURL(url: string) {
         return 'https://github.com/' + url.substring('git@github.com:'.length);
     }
     */
-    // for "ssh://git@git.devpug.xyz:2222/watchpug/***"
+    // for "ssh://git@git.watchpug.com:2222/watchpug/***"
     const pugitMatchResult = (/^\w+:\/\/[^\/]+(\/watchpug\/.+)$/).exec(url);
     if (pugitMatchResult && pugitMatchResult[1]) {
         const cachedOriginalUrl = pugitPathToOriginalUrlCache.get(pugitMatchResult[1]);
