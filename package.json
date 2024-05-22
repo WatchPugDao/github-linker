@@ -64,7 +64,6 @@
         "typescript": "^5.4.5"
     },
     "dependencies": {
-        "@types/clipboardy": "^1.1.0",
         "@types/ini": "^4.1.0",
         "axios": "^1.7.2",
         "clipboardy": "^4.0.0",
