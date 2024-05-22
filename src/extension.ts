@@ -6,7 +6,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as ini from 'ini';
-import * as clipboardy from 'clipboardy';
+import clipboardy from 'clipboardy';
 import axios from "axios"
 
 const pugitPathToOriginalUrlCache = new Map<string, string>();
