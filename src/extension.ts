@@ -2,11 +2,12 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import {ProgressLocation} from 'vscode';
 
 import * as path from 'path';
 import * as fs from 'fs';
 import * as ini from 'ini';
-import axios from "axios"
+import axios from "axios";
 
 const pugitPathToOriginalUrlCache = new Map<string, string>();
 
@@ -29,11 +30,18 @@ async function getGitHubRepoURL(url: string) {
         if (cachedOriginalUrl) {
             return cachedOriginalUrl;
         } else {
-            vscode.window.showInformationMessage('GitHub linker: Fetching original url ...');
-            const { data } = await axios({
-                method: "GET",
-                url: `https://eo5451bufu073qw.m.pipedream.net${pugitMatchResult[1]}`,
-            });
+            const { data } = await vscode.window.withProgress(
+                {
+                    location: ProgressLocation.Notification,
+                    title: 'GitHub linker: Fetching original url ...',
+                    cancellable: false,
+                },
+                async () => {
+                    return axios<{ original_url: string }>({
+                        method: "GET",
+                        url: `https://eo5451bufu073qw.m.pipedream.net${pugitMatchResult[1]}`,
+                    });
+                });
             pugitPathToOriginalUrlCache.set(pugitMatchResult[1], data.original_url);
             return data.original_url;
         }
