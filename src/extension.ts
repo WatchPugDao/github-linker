@@ -6,7 +6,6 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as ini from 'ini';
-import clipboardy from 'clipboardy';
 import axios from "axios"
 
 const pugitPathToOriginalUrlCache = new Map<string, string>();
@@ -156,10 +155,55 @@ async function calculateURL() {
     return `${absolutePathURL}#L${start}-L${end}`;
 }
 
+function getFileName() {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        throw new Error('No selected editor');
+    }
+    const {document: {fileName}} = editor;
+    return path.basename(fileName);
+}
+
+enum MarkdownDialect {
+    Standard = 'Standard',
+    Hacknote = 'Hacknote',
+}
+
+async function copyMarkdown(markdownDialect: MarkdownDialect) {
+    try {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            throw new Error('No selected editor');
+        }
+        const {document, selection} = editor;
+
+        const text = document.getText(selection);
+
+        const finalURL = await calculateURL();
+
+        const start = selection.start.line + 1;
+
+        const markdown = markdownDialect === MarkdownDialect.Standard ?
+            (finalURL + '\n\n```' + document.languageId + '=' + start + '\n' + text + '\n```') :
+            ('```' + document.languageId + '=' + start + ' ' + `[${getFileName()}](${finalURL})` + '\n' + text + '\n```');
+        // use `import()` to import ECMAScript module from this CommonJS module
+        const clipboardy = (await import("clipboardy")).default;
+        clipboardy.writeSync(markdown);
+        vscode.window.showInformationMessage('GitHub URL and code copied to the clipboard!');
+    } catch (err) {
+        if (err instanceof Error) {
+            vscode.window.showErrorMessage(err.message);
+        }
+        throw err;
+    }
+}
+
 export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('githublinker.copyLink', async () => {
         try {
             const finalURL = await calculateURL();
+            // use `import()` to import ECMAScript module from this CommonJS module
+            const clipboardy = (await import("clipboardy")).default;
             clipboardy.writeSync(finalURL);
             vscode.window.showInformationMessage('GitHub URL copied to the clipboard!');
         } catch (err) {
@@ -171,28 +215,11 @@ export function activate(context: vscode.ExtensionContext) {
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('githublinker.copyMarkdown', async () => {
-        try {
-            const editor = vscode.window.activeTextEditor;
-            if (!editor) {
-                throw new Error('No selected editor');
-            }
-            const {document, selection} = editor;
+        await copyMarkdown(MarkdownDialect.Standard);
+    }));
 
-            const text = document.getText(selection);
-
-            const finalURL = await calculateURL();
-
-            const start = selection.start.line + 1;
-
-            const markdown = finalURL + '\n\n```' + document.languageId + '=' + start + '\n' + text + '\n```';
-            clipboardy.writeSync(markdown);
-            vscode.window.showInformationMessage('GitHub URL and code copied to the clipboard!');
-        } catch (err) {
-            if (err instanceof Error) {
-                vscode.window.showErrorMessage(err.message);
-            }
-            throw err;
-        }
+    context.subscriptions.push(vscode.commands.registerCommand('githublinker.copyHacknoteMarkdown', async () => {
+        await copyMarkdown(MarkdownDialect.Hacknote);
     }));
 }
 
