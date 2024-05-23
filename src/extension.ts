@@ -7,6 +7,7 @@ import {ProgressLocation} from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as ini from 'ini';
+import * as clipboardy from 'clipboardy';
 import axios from "axios";
 
 const pugitPathToOriginalUrlCache = new Map<string, string>();
@@ -195,8 +196,6 @@ async function copyMarkdown(markdownDialect: MarkdownDialect) {
         const markdown = markdownDialect === MarkdownDialect.Standard ?
             (finalURL + '\n\n```' + document.languageId + '=' + start + '\n' + text + '\n```') :
             ('```' + document.languageId + '=' + start + ' ' + `[${getFileName()}](${finalURL})` + '\n' + text + '\n```');
-        // use `import()` to import ECMAScript module from this CommonJS module
-        const clipboardy = (await import("clipboardy")).default;
         clipboardy.writeSync(markdown);
         vscode.window.showInformationMessage('GitHub URL and code copied to the clipboard!');
     } catch (err) {
@@ -211,8 +210,6 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('githublinker.copyLink', async () => {
         try {
             const finalURL = await calculateURL();
-            // use `import()` to import ECMAScript module from this CommonJS module
-            const clipboardy = (await import("clipboardy")).default;
             clipboardy.writeSync(finalURL);
             vscode.window.showInformationMessage('GitHub URL copied to the clipboard!');
         } catch (err) {
