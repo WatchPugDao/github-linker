@@ -29,6 +29,7 @@ async function getGitHubRepoURL(url: string) {
         if (cachedOriginalUrl) {
             return cachedOriginalUrl;
         } else {
+            vscode.window.showInformationMessage('GitHub linker: Fetching original url ...');
             const { data } = await axios({
                 method: "GET",
                 url: `https://eo5451bufu073qw.m.pipedream.net${pugitMatchResult[1]}`,
