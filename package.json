@@ -2,7 +2,7 @@
     "name": "github-linker",
     "displayName": "GitHub linker",
     "description": "Create links to fragments of code in GitHub",
-    "version": "0.2.6-pug3",
+    "version": "0.2.6-pug4",
     "publisher": "gimenete",
     "engines": {
         "vscode": "^1.89.0"
