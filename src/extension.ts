@@ -5,10 +5,9 @@ import * as vscode from 'vscode';
 import {ProgressLocation} from 'vscode';
 
 import * as path from 'path';
-import * as fs from 'fs';
-import * as ini from 'ini';
 import * as clipboardy from 'clipboardy';
 import axios from "axios";
+import { API, GitExtension, Repository } from './typing/git';
 
 const pugitPathToOriginalUrlCache = new Map<string, string>();
 
@@ -56,42 +55,49 @@ async function getGitHubRepoURL(url: string) {
     return null;
 }
 
-function findGitFolder(fileName: string): string {
-    let dir = path.dirname(fileName)
-    const { root } = path.parse(dir)
-    let gitDir = null;
-    while (true) {
-        gitDir = path.join(dir, '.git');
-        const exits = fs.existsSync(gitDir);
-        if (exits) {
-            console.log(gitDir);
-            break;
-        } else if (dir === root) {
-            gitDir = null;
-            break;
+async function getGitAPI(): Promise<API | undefined> {
+    const extension = vscode.extensions.getExtension<GitExtension>('vscode.git');
+    if (!extension) {
+        return undefined;
+    }
+    if (!extension.isActive) {
+        try {
+            await extension.activate();
+        } catch {
+            return undefined;
         }
-        dir = path.dirname(dir);
     }
-
-    if (!gitDir) {
-        throw new Error('No .git dir found. Is this a git repo?');
+    if (!extension.exports.enabled) {
+        return undefined;
     }
-
-    return gitDir
+    return extension.exports.getAPI(1);
 }
 
-function getWorktreePath(gitPath: string) {
-    if (fs.statSync(gitPath).isFile()) {
-        // not a normal .git dir, could be a `git worktree`, read the file to find the real root
-        const text = fs.readFileSync(gitPath).toString()
-
-        console.log('gitPath is a file, checking to see if worktree', { text })
-
-        const worktreePrefix = 'gitdir: ';
-
-        if (text.startsWith(worktreePrefix)) {
-            return text.slice(worktreePrefix.length).trim();
+async function findRepositoryForFile(api: API, fileName: string): Promise<Repository | undefined> {
+    let best: Repository | undefined;
+    let bestLength = -1;
+    for (const repo of api.repositories) {
+        const root = repo.rootUri.fsPath;
+        if (fileName.startsWith(root + path.sep) && root.length > bestLength) {
+            best = repo;
+            bestLength = root.length;
         }
+    }
+    if (best) {
+        return best;
+    }
+
+    let dir = path.dirname(fileName);
+    const { root: fsRoot } = path.parse(dir);
+    while (true) {
+        const repo = await api.openRepository(vscode.Uri.file(dir));
+        if (repo) {
+            return repo;
+        }
+        if (dir === fsRoot) {
+            return undefined;
+        }
+        dir = path.dirname(dir);
     }
 }
 
@@ -103,57 +109,44 @@ async function calculateURL() {
     const {document, selection} = editor;
     const {fileName} = document;
 
-    let gitDir = findGitFolder(fileName);
-
-    const baseDir = path.join(gitDir, '..')
-
-    const worktreePath = getWorktreePath(gitDir)
-
-    if (worktreePath) {
-        gitDir = path.join(worktreePath, '..', '..')
+    if (document.uri.scheme !== 'file') {
+        throw new Error('Not a file on disk');
     }
 
-    const relativePath = path.relative(baseDir, fileName);
-
-    const head = fs.readFileSync(path.join(worktreePath || gitDir, 'HEAD'), 'utf8');
-    const refPrefix = 'ref: ';
-    const ref = head.split('\n').find(line => line.startsWith(refPrefix));
-    if (!ref) {
-        throw new Error('No ref found. Cannot calculate current commit');
+    const api = await getGitAPI();
+    if (!api) {
+        throw new Error('Built-in Git extension is not available');
     }
-    const refName = ref.substring(refPrefix.length);
-    const sha = fs.readFileSync(path.join(gitDir, refName), 'utf8').trim();
-
-    const gitConfig = ini.parse(fs.readFileSync(path.join(gitDir, 'config'), 'utf8'));
-
-    const branchInfo = Object.values(gitConfig).find(val => val['merge'] === refName);
-    const remote = (() => {
-        if (branchInfo) {
-            return branchInfo['remote'];
-        } else {
-            vscode.window.showInformationMessage('No branch info found. Try use first remote');
-            for (const entry of Object.entries(gitConfig)) {
-                const matchResult = (/remote "(.+)"/).exec(entry[0]);
-                if (matchResult && matchResult[1]) {
-                    return matchResult[1];
-                }
-            }
-        }
-    })();
-    const remoteInfo = Object.entries(gitConfig).find((entry) => entry[0] === `remote "${remote}"`);
-    if (!remoteInfo) {
-        throw new Error(`No remote found called "${remote}"`);
+    const repo = await findRepositoryForFile(api, fileName);
+    if (!repo) {
+        throw new Error('No git repository found. Is this file inside a git repo?');
     }
-    const url = remoteInfo[1]['url'];
-    const repoURL = await getGitHubRepoURL(url);
-    if (!url) {
-        throw new Error(`The remote "${remote}" does not look like to be hosted at GitHub`);
+
+    const head = repo.state.HEAD;
+    if (!head?.commit) {
+        throw new Error('Repository has no commits yet');
+    }
+    const sha = head.commit;
+
+    const remotes = repo.state.remotes;
+    const remote =
+        remotes.find(r => r.name === head.upstream?.remote) ??
+        remotes.find(r => !r.isReadOnly) ??
+        remotes[0];
+    const remoteUrl = remote?.fetchUrl ?? remote?.pushUrl;
+    if (!remoteUrl) {
+        throw new Error('No remote configured for this repository');
+    }
+
+    const repoURL = await getGitHubRepoURL(remoteUrl);
+    if (!repoURL) {
+        throw new Error(`The remote "${remote!.name}" is not a GitHub repository`);
     }
 
     const start = selection.start.line + 1;
     const end = selection.end.line + 1;
 
-    const relativePathURL = relativePath.split(path.sep).join('/');
+    const relativePathURL = path.relative(repo.rootUri.fsPath, fileName).split(path.sep).join('/');
     const absolutePathURL = `${repoURL}/blob/${sha}/${relativePathURL}`;
 
     if (start === 1 && end === document.lineCount) {
