@@ -55,19 +55,9 @@ async function getGitHubRepoURL(url: string) {
     return null;
 }
 
-async function getGitAPI(): Promise<API | undefined> {
+function getGitAPI(): API | undefined {
     const extension = vscode.extensions.getExtension<GitExtension>('vscode.git');
-    if (!extension) {
-        return undefined;
-    }
-    if (!extension.isActive) {
-        try {
-            await extension.activate();
-        } catch {
-            return undefined;
-        }
-    }
-    if (!extension.exports.enabled) {
+    if (!extension?.isActive || !extension.exports.enabled) {
         return undefined;
     }
     return extension.exports.getAPI(1);
@@ -113,9 +103,9 @@ async function calculateURL() {
         throw new Error('Not a file on disk');
     }
 
-    const api = await getGitAPI();
+    const api = getGitAPI();
     if (!api) {
-        throw new Error('Built-in Git extension is not available');
+        throw new Error('Built-in Git extension is not available or disabled');
     }
     const repo = await findRepositoryForFile(api, fileName);
     if (!repo) {
