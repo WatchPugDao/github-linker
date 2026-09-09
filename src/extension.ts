@@ -124,7 +124,7 @@ async function calculateURL() {
 
     const head = repo.state.HEAD;
     if (!head?.commit) {
-        throw new Error('Repository has no commits yet');
+        throw new Error('Repository state is not ready yet, or the branch has no commits yet. Try again');
     }
     const sha = head.commit;
 
