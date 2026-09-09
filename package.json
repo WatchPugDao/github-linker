@@ -20,6 +20,7 @@
     "activationEvents": [
         "onCommand:githublinker.copyLink",
         "onCommand:githublinker.copyMarkdown",
+        "onCommand:githublinker.copyHacknoteMarkdownInline",
         "onCommand:githublinker.copyHacknoteMarkdown"
     ],
     "main": "./out/extension",
@@ -38,6 +39,11 @@
             },
             {
                 "when": "editorTextFocus || editorHasSelection",
+                "command": "githublinker.copyHacknoteMarkdownInline",
+                "title": "GitHub linker: Copy link to selection and code as markdown (hacknote inline)"
+            },
+            {
+                "when": "editorTextFocus || editorHasSelection",
                 "command": "githublinker.copyHacknoteMarkdown",
                 "title": "GitHub linker: Copy link to selection and code as markdown (hacknote)"
             }
@@ -52,6 +58,11 @@
                 {
                     "when": "editorTextFocus || editorHasSelection",
                     "command": "githublinker.copyMarkdown",
+                    "group": "9_cutcopypaste"
+                },
+                {
+                    "when": "editorTextFocus || editorHasSelection",
+                    "command": "githublinker.copyHacknoteMarkdownInline",
                     "group": "9_cutcopypaste"
                 },
                 {

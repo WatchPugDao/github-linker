@@ -158,6 +158,7 @@ function getFileName() {
 
 enum MarkdownDialect {
     Standard = 'Standard',
+    HacknoteInline = 'HacknoteInline',
     Hacknote = 'Hacknote',
 }
 
@@ -177,7 +178,7 @@ async function copyMarkdown(markdownDialect: MarkdownDialect) {
 
         const markdown = markdownDialect === MarkdownDialect.Standard ?
             (finalURL + '\n\n```' + document.languageId + '=' + start + '\n' + text + '\n```') :
-            ('```' + document.languageId + '=' + start + ' ' + `[${getFileName()}](${finalURL})` + '\n' + text + '\n```');
+            ('```' + document.languageId + '=' + start + ' ' + `[${getFileName()}](${finalURL})` + (markdownDialect === MarkdownDialect.HacknoteInline ? ' inline' : '') + '\n' + text + '\n```');
         await vscode.env.clipboard.writeText(markdown);
         vscode.window.showInformationMessage('GitHub URL and code copied to the clipboard!');
     } catch (err) {
@@ -204,6 +205,10 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(vscode.commands.registerCommand('githublinker.copyMarkdown', async () => {
         await copyMarkdown(MarkdownDialect.Standard);
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('githublinker.copyHacknoteMarkdownInline', async () => {
+        await copyMarkdown(MarkdownDialect.HacknoteInline);
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('githublinker.copyHacknoteMarkdown', async () => {
