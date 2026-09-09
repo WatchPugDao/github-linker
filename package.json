@@ -69,8 +69,8 @@
         "@types/mocha": "^10.0.6",
         "@types/node": "^20.12.12",
         "@types/vscode": "^1.89.0",
-        "@vscode/test-cli": "^0.0.9",
-        "@vscode/test-electron": "^2.3.10",
+        "@vscode/test-cli": "^0.0.15",
+        "@vscode/test-electron": "^3.1.0",
         "tslint": "^5.20.1",
         "typescript": "^5.4.5"
     },
