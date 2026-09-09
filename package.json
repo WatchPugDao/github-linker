@@ -78,7 +78,6 @@
         "typescript": "^5.4.5"
     },
     "dependencies": {
-        "axios": "^1.7.2",
-        "clipboardy": "^2.3.0"
+        "axios": "^1.7.2"
     }
 }

@@ -5,7 +5,6 @@ import * as vscode from 'vscode';
 import {ProgressLocation} from 'vscode';
 
 import * as path from 'path';
-import * as clipboardy from 'clipboardy';
 import axios from "axios";
 import { API, GitExtension, Repository } from './typing/git';
 
@@ -179,7 +178,7 @@ async function copyMarkdown(markdownDialect: MarkdownDialect) {
         const markdown = markdownDialect === MarkdownDialect.Standard ?
             (finalURL + '\n\n```' + document.languageId + '=' + start + '\n' + text + '\n```') :
             ('```' + document.languageId + '=' + start + ' ' + `[${getFileName()}](${finalURL})` + '\n' + text + '\n```');
-        clipboardy.writeSync(markdown);
+        await vscode.env.clipboard.writeText(markdown);
         vscode.window.showInformationMessage('GitHub URL and code copied to the clipboard!');
     } catch (err) {
         if (err instanceof Error) {
@@ -193,7 +192,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('githublinker.copyLink', async () => {
         try {
             const finalURL = await calculateURL();
-            clipboardy.writeSync(finalURL);
+            await vscode.env.clipboard.writeText(finalURL);
             vscode.window.showInformationMessage('GitHub URL copied to the clipboard!');
         } catch (err) {
             if (err instanceof Error) {
